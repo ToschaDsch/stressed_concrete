@@ -1,11 +1,14 @@
+import math
 from functools import partial
 
 from PySide6 import QtGui
-from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QColor, QPolygon, QPolygonF
-from PySide6.QtWidgets import QHBoxLayout, QWidget, QMainWindow, QVBoxLayout, QLayout, QLabel, QTabWidget, QPushButton, \
-    QLineEdit, QGridLayout
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QColor, QPolygonF
+from PySide6.QtWidgets import (QHBoxLayout, QWidget, QMainWindow, QVBoxLayout, QLayout, QLabel, QTabWidget,
+                               QPushButton, QLineEdit, QGridLayout)
 
+from small_classes import XY
+from static_functions import make_spline
 from variables import Variables, TextTranslation
 
 
@@ -22,11 +25,18 @@ class GeneralWindow(QMainWindow):
         self._current_span = 0
         self._list_of_tabs: [QWidget] = []
         self._scale_spans = 0
-        self._vertical_scale_of_spans = 3
-        self._list_of_p: [float] = []
+        self._vertical_scale_of_spans = 10
+        self._dx = 1
+        self._coordinate_for_spline: dict[XY] = dict()
+        self._list_of_p_bottom: [float] = []
+        self._list_of_p_top: [float] = []
         self._list_of_h: [float] = []
         self._list_of_l: [float] = []
         self._list_of_y: [float] = []
+        self._list_of_e0: [float] = []
+        self._list_of_f: [float] = []
+        self._list_of_en: [float] = []
+        self._list_of_x: list[float] = list()
 
         self.canvas = QtGui.QPixmap(Variables.bh_screen_label[0], Variables.bh_screen_label[1])
         self.canvas.fill(Variables.MyColors.background)
@@ -47,7 +57,7 @@ class GeneralWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(general_layout)
         self.setCentralWidget(widget)
-        self._draw_graph()
+        self._calculate_ans_draw_all()
 
     def _init_left_layout(self, left_layout: QLayout):
         plus_minus_span_layout = self._make_plus_minus_span_layout()
@@ -65,17 +75,63 @@ class GeneralWindow(QMainWindow):
     def _init_right_layout(self, right_layout: QLayout):
         label_scale = QLabel(TextTranslation.scale_of_the_span.text)
         right_layout.addWidget(label_scale)
-        entry_scale = QLineEdit('3')
+        entry_scale = QLineEdit(str(self._vertical_scale_of_spans))
         entry_scale.textChanged.connect(partial(self._new_value, 'v_scale', self._number_of_spans))
         right_layout.addWidget(entry_scale)
+        label_dx = QLabel('dx, m = ')
+        right_layout.addWidget(label_dx)
+        entry_dx = QLineEdit(str(self._dx))
+        entry_dx.textChanged.connect(partial(self._new_value, 'dx', self._number_of_spans))
+        right_layout.addWidget(entry_dx)
 
     def _change_tab(self, i):
         self._current_span = i
 
     def _make_a_new_tab_element(self):
         new_tab_layout = QWidget()
+        general_layout = QVBoxLayout()
         name_of_the_tab = TextTranslation.span.text + ' Nr.' + str(self._number_of_spans)
+        parameters_of_the_span = self._make_layout_parameter_of_the_span()
+        parameters_of_ideal_cables = self._make_parameters_of_ideal_cables()
 
+        general_layout.addLayout(parameters_of_the_span)
+        general_layout.addLayout(parameters_of_ideal_cables)
+        new_tab_layout.setLayout(general_layout)
+        self._list_of_tabs.append(new_tab_layout)
+        self._tab_menu.addTab(new_tab_layout, name_of_the_tab)
+
+        self._number_of_spans += 1
+
+    def _make_parameters_of_ideal_cables(self) -> QWidget:
+        parameters_layout = QGridLayout()
+        label_e0 = QLabel('e0, m =')
+        label_e0.setEnabled(self._number_of_spans != 1)
+        parameters_layout.addWidget(label_e0, 0, 0)
+        new_e0 = 0.2 if self._number_of_spans == 0 else self._list_of_en[-1]
+        self._list_of_e0.append(new_e0)
+        entry_e0 = QLineEdit(str(self._list_of_e0[self._number_of_spans]))
+        entry_e0.setEnabled(self._number_of_spans != 1)
+        entry_e0.textChanged.connect(partial(self._new_value, 'e0', self._number_of_spans))
+        parameters_layout.addWidget(entry_e0, 0, 1)
+
+        label_f = QLabel('f, m =')
+        parameters_layout.addWidget(label_f, 1, 0)
+        new_f = 0.2 if self._number_of_spans == 0 else self._list_of_f[-1]
+        self._list_of_f.append(new_f)
+        entry_f = QLineEdit(str(self._list_of_f[self._number_of_spans]))
+        entry_f.textChanged.connect(partial(self._new_value, 'f', self._number_of_spans))
+        parameters_layout.addWidget(entry_f, 1, 1)
+
+        label_en = QLabel('en, m =')
+        parameters_layout.addWidget(label_en, 2, 0)
+        new_en = 0.2 if self._number_of_spans == 0 else self._list_of_en[-1]
+        self._list_of_en.append(new_en)
+        entry_en = QLineEdit(str(self._list_of_en[self._number_of_spans]))
+        entry_en.textChanged.connect(partial(self._new_value, 'en', self._number_of_spans))
+        parameters_layout.addWidget(entry_en, 2, 1)
+        return parameters_layout
+
+    def _make_layout_parameter_of_the_span(self) -> QWidget:
         parameters_of_the_span = QGridLayout()
         label_h = QLabel('h, m =')
         parameters_of_the_span.addWidget(label_h, 0, 0)
@@ -101,19 +157,22 @@ class GeneralWindow(QMainWindow):
         entry_y.textChanged.connect(partial(self._new_value, 'y', self._number_of_spans))
         parameters_of_the_span.addWidget(entry_y, 2, 1)
 
-        label_p = QLabel('p, kN =')
+        label_p = QLabel(TextTranslation.p_under.text)
         parameters_of_the_span.addWidget(label_p, 3, 0)
-        new_p = 3500 if self._number_of_spans == 0 else self._list_of_p[-1]
-        self._list_of_p.append(new_p)
-        entry_p = QLineEdit(str(self._list_of_p[self._number_of_spans]))
-        entry_p.textChanged.connect(partial(self._new_value, 'p', self._number_of_spans))
+        new_p = 3500 if self._number_of_spans == 0 else self._list_of_p_bottom[-1]
+        self._list_of_p_bottom.append(new_p)
+        entry_p = QLineEdit(str(self._list_of_p_bottom[self._number_of_spans]))
+        entry_p.textChanged.connect(partial(self._new_value, 'p_bottom', self._number_of_spans))
         parameters_of_the_span.addWidget(entry_p, 3, 1)
 
-        new_tab_layout.setLayout(parameters_of_the_span)
-        self._list_of_tabs.append(new_tab_layout)
-        self._tab_menu.addTab(new_tab_layout, name_of_the_tab)
-
-        self._number_of_spans += 1
+        label_p_top = QLabel(TextTranslation.p_top.text)
+        parameters_of_the_span.addWidget(label_p_top, 4, 0)
+        new_p = 3500 if self._number_of_spans == 0 else self._list_of_p_top[-1]
+        self._list_of_p_top.append(new_p)
+        entry_p_top = QLineEdit(str(self._list_of_p_top[self._number_of_spans]))
+        entry_p_top.textChanged.connect(partial(self._new_value, 'p_top', self._number_of_spans))
+        parameters_of_the_span.addWidget(entry_p_top, 4, 1)
+        return parameters_of_the_span
 
     def _new_value(self, type_of_the_value: str, tab_index: int, new_value: str):
         try:
@@ -127,11 +186,21 @@ class GeneralWindow(QMainWindow):
                 self._list_of_l[tab_index] = t
             case 'y':
                 self._list_of_y[tab_index] = t
-            case 'p':
-                self._list_of_p[tab_index] = t
+            case 'p_bottom':
+                self._list_of_p_bottom[tab_index] = t
+            case 'p_top':
+                self._list_of_p_top[tab_index] = t
             case 'v_scale':
                 self._vertical_scale_of_spans = t
-        self._draw_graph()
+            case 'e0':
+                self._list_of_e0[tab_index] = t
+            case 'f':
+                self._list_of_f[tab_index] = t
+            case 'en':
+                self._list_of_en[tab_index] = t
+            case 'dx':
+                self._dx = t
+        self._calculate_ans_draw_all()
 
     def _make_plus_minus_span_layout(self) -> QLayout:
         plus_minus_span_layout = QHBoxLayout()
@@ -156,8 +225,11 @@ class GeneralWindow(QMainWindow):
             self._list_of_h.pop()
             self._list_of_y.pop()
             self._list_of_l.pop()
-            self._list_of_p.pop()
-        self._draw_graph()
+            self._list_of_p_bottom.pop()
+            self._list_of_e0.pop()
+            self._list_of_f.pop()
+            self._list_of_en.pop()
+        self._calculate_ans_draw_all()
 
     def _make_scale(self):
         s_l = 0
@@ -179,11 +251,11 @@ class GeneralWindow(QMainWindow):
         self._painter = QtGui.QPainter(canvas)
 
         self._draw_spans()
+        self._draw_spline_for_ideal_cable()
         self._painter.end()
         self._screen_label.setPixmap(canvas)
 
     def _draw_spans(self):
-
         color = Variables.MyColors.spans
         brush = QtGui.QBrush(color)
         self._painter.setBrush(brush)
@@ -199,9 +271,9 @@ class GeneralWindow(QMainWindow):
         # joint 0
         a = 10
         polygon = QPolygonF()
-        polygon.append(QPointF(x0, y0 + self._list_of_h[0]*self._scale_spans * self._vertical_scale_of_spans))
-        polygon.append(QPointF(x0 + a, y0 + self._list_of_h[0]*self._scale_spans * self._vertical_scale_of_spans + a))
-        polygon.append(QPointF(x0 - a, y0 + self._list_of_h[0]*self._scale_spans * self._vertical_scale_of_spans + a))
+        polygon.append(QPointF(x0, y0 + self._list_of_h[0] * self._scale_spans * self._vertical_scale_of_spans))
+        polygon.append(QPointF(x0 + a, y0 + self._list_of_h[0] * self._scale_spans * self._vertical_scale_of_spans + a))
+        polygon.append(QPointF(x0 - a, y0 + self._list_of_h[0] * self._scale_spans * self._vertical_scale_of_spans + a))
         self._painter.drawPolygon(polygon)
 
         for i in range(self._number_of_spans):
@@ -211,11 +283,106 @@ class GeneralWindow(QMainWindow):
             self._painter.drawRect(x0, y0, dx, dy)
             # draw line y
             self._painter.setPen(pen_y)
-            y_ = y0 + self._list_of_y[i] * self._scale_spans * self._vertical_scale_of_spans
+            y_ = y0 + (self._list_of_h[i] - self._list_of_y[i]) * self._scale_spans * self._vertical_scale_of_spans
             self._painter.drawLine(x0, y_, x0 + dx, y_)
             self._painter.setPen(pen)
             x0 += dx
             # draw a joint
-            self._painter.drawEllipse(x0 - a*.5, y0 + dy, a, a)
+            self._painter.drawEllipse(x0 - a * .5, y0 + dy, a, a)
 
+    def _draw_spline_for_ideal_cable(self):
+        if len(self._coordinate_for_spline) < 4:
+            return None
+        x_points = []
+        y_points = []
+        list_x_sorted = sorted(self._coordinate_for_spline.values(), key=lambda point: point.x)
+        for point in list_x_sorted:
+            x_points.append(point.x)
+            y_points.append(point.y)
+        spline_line = make_spline(x_points=x_points, y_points=y_points, list_of_new_x=self._list_of_x)
+        color = QColor(*(10, 255, 0))
+        pen = QtGui.QPen()
+        pen.setColor(QtGui.QColor(color))
+        pen.setWidth(1)
+        self._painter.setPen(pen)
+        if spline_line is None:
+            return None
+        b0 = Variables.border_for_screen
+        j = 0
+        l_0 = self._list_of_l[0]
+        for i in range(len(spline_line) - 1):
+            point0: XY = spline_line[i]
+            point1: XY = spline_line[i + 1]
+            if point1.x > l_0:
+                j += 1
+                l_0 += self._list_of_l[j]
 
+            x1 = self._scale_spans * point0.x + b0
+            y1 = b0 + self._scale_spans * self._vertical_scale_of_spans * (self._list_of_h[j] - self._list_of_y[j] -
+                                                                           point0.y)
+            x2 = self._scale_spans * point1.x + b0
+            y2 = b0 + self._scale_spans * self._vertical_scale_of_spans * (self._list_of_h[j] - self._list_of_y[j] -
+                                                                           point1.y)
+            self._painter.drawLine(x1, y1, x2, y2)
+
+    def _calculate_all(self):
+        self._make_dict_of_x()
+        self._calculate_spline_for_ideal()
+        m_dir = self._make_m_ideal()
+
+    def _calculate_ans_draw_all(self):
+        self._calculate_all()
+        self._draw_graph()
+
+    def _calculate_spline_for_ideal(self):
+        self._coordinate_for_spline = dict()
+        x0 = 0
+        for i in range(self._number_of_spans):
+            l_i = self._list_of_l[i]
+            if i == 0:
+                self._coordinate_for_spline[f'e0 {i}'] = XY(x=x0, y=self._list_of_e0[i], i=i)
+                if self._number_of_spans == 1:
+                    self._coordinate_for_spline[f'e025 {i}'] = XY(x=x0 + l_i * .15, y=0, i=i)
+                    self._coordinate_for_spline[f'e075 {i}'] = XY(x=x0 + l_i * .85, y=0, i=i)
+            self._coordinate_for_spline[f'f {i}'] = XY(x=x0 + .5 * l_i, y=-self._list_of_f[i], i=i)
+            self._coordinate_for_spline[f'en {i}'] = XY(x=x0 + l_i, y=self._list_of_en[i], i=i)
+            x0 += l_i
+
+    def _make_dict_of_x(self):
+        self._list_of_x = list()
+        if self._dx == 0:
+            return None
+        x0 = 0
+        self._list_of_x.append(x0)
+        for i, l in enumerate(self._list_of_l):
+            n = math.ceil(l / self._dx)
+            dl = l / n
+            for j in range(1, n + 1):
+                x0 += dl
+                self._list_of_x.append(x0)
+
+    def _make_m_ideal(self) -> [float]:
+        j = 0
+        l_i = self._list_of_l[0]
+        l_0 = 0
+        f_i = .5 * (self._list_of_e0[0] + self._list_of_en[0]) + self._list_of_f[0]
+        p_i_top_left = self._list_of_p_bottom[0]
+        p_i_bottom = self._list_of_p_bottom[0]
+        p_i_top_right = self._list_of_p_top[0]
+        list_of_m_dir = []
+        for x in self._list_of_x:
+            if x > l_i:
+                j += 1
+                l_i += self._list_of_l[j]
+                l_0 += self._list_of_l[j - 1]
+                f_i = .5 * (self._list_of_en[j - 1] + self._list_of_en[j]) + self._list_of_f[j]
+                p_i_top_left = self._list_of_p_top[j - 1]
+                p_i_bottom = self._list_of_p_bottom[j]
+                p_i_top_right = self._list_of_p_top[j]
+            x_i = x - l_0
+            g = 8 * f_i * p_i_bottom / l_i ** 2
+            mf = g * (l_i * x_i - x_i ** 2)  # moment from f - parabola
+            me_l = (1 - x_i / l_i) * p_i_top_left  # moment from e left - triangle
+            me_r = x_i / l_i * p_i_top_right  # moment from e right - triangle
+            list_of_m_dir.append(mf + me_l + me_r)
+        return list_of_m_dir

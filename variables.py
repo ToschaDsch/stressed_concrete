@@ -203,6 +203,8 @@ class TextTranslation:
     intensity = Translation(english='intensity, kN/m', german='Intensität, kN/m')
     type_of_projection = Translation(english='projection', german='Projektion')
     u_sections = Translation(english='U sections', german='U Profile')
+    p_under = Translation(english='P,bottom, kN =', german='P,unten, kN =')
+    p_top = Translation(english='P,top, kN =', german='P,oben, kN =')
     welded_profile = Translation(english='welded profile', german='geschweißte Profile')
     wind = Translation(english='wind', german='Wind')
     wood = Translation(english='wood', german='Holz')
