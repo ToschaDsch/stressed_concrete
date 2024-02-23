@@ -1,8 +1,8 @@
 from functools import partial
 
 from PySide6 import QtGui
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QColor, QPolygon, QPolygonF
 from PySide6.QtWidgets import QHBoxLayout, QWidget, QMainWindow, QVBoxLayout, QLayout, QLabel, QTabWidget, QPushButton, \
     QLineEdit, QGridLayout
 
@@ -22,6 +22,7 @@ class GeneralWindow(QMainWindow):
         self._current_span = 0
         self._list_of_tabs: [QWidget] = []
         self._scale_spans = 0
+        self._vertical_scale_of_spans = 3
         self._list_of_p: [float] = []
         self._list_of_h: [float] = []
         self._list_of_l: [float] = []
@@ -40,11 +41,13 @@ class GeneralWindow(QMainWindow):
         self._init_middle_layout(middle_layout=middle_layout)
         general_layout.addLayout(middle_layout)
         right_layout = QVBoxLayout()
+        self._init_right_layout(right_layout=right_layout)
         general_layout.addLayout(right_layout)
 
         widget = QWidget()
         widget.setLayout(general_layout)
         self.setCentralWidget(widget)
+        self._draw_graph()
 
     def _init_left_layout(self, left_layout: QLayout):
         plus_minus_span_layout = self._make_plus_minus_span_layout()
@@ -55,12 +58,16 @@ class GeneralWindow(QMainWindow):
         self._make_a_new_tab_element()
 
     def _init_middle_layout(self, middle_layout: QLayout):
-        self._screen_label.setFixedHeight(Variables.bh_screen_label[0])
-        self._screen_label.setFixedWidth(Variables.bh_screen_label[1])
+        self._screen_label.setFixedHeight(Variables.bh_screen_label[1])
+        self._screen_label.setFixedWidth(Variables.bh_screen_label[0])
         middle_layout.addWidget(self._screen_label)
 
     def _init_right_layout(self, right_layout: QLayout):
-        pass
+        label_scale = QLabel(TextTranslation.scale_of_the_span.text)
+        right_layout.addWidget(label_scale)
+        entry_scale = QLineEdit('3')
+        entry_scale.textChanged.connect(partial(self._new_value, 'v_scale', self._number_of_spans))
+        right_layout.addWidget(entry_scale)
 
     def _change_tab(self, i):
         self._current_span = i
@@ -122,6 +129,8 @@ class GeneralWindow(QMainWindow):
                 self._list_of_y[tab_index] = t
             case 'p':
                 self._list_of_p[tab_index] = t
+            case 'v_scale':
+                self._vertical_scale_of_spans = t
         self._draw_graph()
 
     def _make_plus_minus_span_layout(self) -> QLayout:
@@ -156,7 +165,7 @@ class GeneralWindow(QMainWindow):
         for i, l_i in enumerate(self._list_of_l):
             s_l += l_i
             if self._list_of_h[i] > max_h:
-                max_h = self._list_of_h[i]
+                max_h = self._list_of_h[i] * self._vertical_scale_of_spans
         if s_l == 0:
             return None
         scale_x = (Variables.bh_screen_label[0] - 2 * Variables.border_for_screen) / s_l
@@ -164,8 +173,9 @@ class GeneralWindow(QMainWindow):
         self._scale_spans = min(scale_x, scale_y)
 
     def _draw_graph(self):
+        self._make_scale()
         canvas = self._screen_label.pixmap()
-        canvas.fill(Qt.black)
+        canvas.fill(Variables.MyColors.background)
         self._painter = QtGui.QPainter(canvas)
 
         self._draw_spans()
@@ -173,16 +183,39 @@ class GeneralWindow(QMainWindow):
         self._screen_label.setPixmap(canvas)
 
     def _draw_spans(self):
+
+        color = Variables.MyColors.spans
+        brush = QtGui.QBrush(color)
+        self._painter.setBrush(brush)
+        pen = QtGui.QPen()
+        pen.setColor(color)
+        pen.setWidth(1)
+
+        pen_y = QtGui.QPen()
+        pen_y.setColor(Variables.MyColors.y_line)
+
         x0 = Variables.border_for_screen
         y0 = Variables.border_for_screen
+        # joint 0
+        a = 10
+        polygon = QPolygonF()
+        polygon.append(QPointF(x0, y0 + self._list_of_h[0]*self._scale_spans * self._vertical_scale_of_spans))
+        polygon.append(QPointF(x0 + a, y0 + self._list_of_h[0]*self._scale_spans * self._vertical_scale_of_spans + a))
+        polygon.append(QPointF(x0 - a, y0 + self._list_of_h[0]*self._scale_spans * self._vertical_scale_of_spans + a))
+        self._painter.drawPolygon(polygon)
+
         for i in range(self._number_of_spans):
-            color = Variables.MyColors.spans
-            pen = QtGui.QPen()
-            pen.setColor(color)
-            pen.setWidth(1)
+            # draw a span
+            dx = self._list_of_l[i] * self._scale_spans
+            dy = self._list_of_h[i] * self._scale_spans * self._vertical_scale_of_spans
+            self._painter.drawRect(x0, y0, dx, dy)
+            # draw line y
+            self._painter.setPen(pen_y)
+            y_ = y0 + self._list_of_y[i] * self._scale_spans * self._vertical_scale_of_spans
+            self._painter.drawLine(x0, y_, x0 + dx, y_)
             self._painter.setPen(pen)
-            x1 = x0 + self._list_of_l[i] * self._scale_spans
-            y1 = y0 + self._list_of_h[i] * self._scale_spans
-            self._painter.drawRect(x0, y0, x1, y1)
-            x0 = x1
-            y0 = y1
+            x0 += dx
+            # draw a joint
+            self._painter.drawEllipse(x0 - a*.5, y0 + dy, a, a)
+
+

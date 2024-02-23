@@ -30,7 +30,7 @@ class Variables:
     screen_width = 0
     screen_height = 0
     general_window = None
-    bh_screen_label = (300, 300)
+    bh_screen_label = (500, 300)
     border_for_screen = 20
 
     @dataclass
@@ -39,8 +39,9 @@ class Variables:
         points = QColor(250, 10, 0)
         lines = QColor(250, 50, 0)
         transparency = 100
-        background = QColor(40, 40, 40)
-        spans = QColor(60, 60, 60)
+        background = QColor(240, 240, 240)
+        spans = QColor(160, 160, 160)
+        y_line = QColor(60, 60, 160)
 
 
 class Translation:
@@ -175,6 +176,7 @@ class TextTranslation:
     shear_forge_z = Translation(english='shear forge, z', german='Querkraft, z')
     scale = Translation(english='scale', german='Maßstab')
     scale_of_displacement = Translation(english='scale of displacement', german='Verformungsmaßstab')
+    scale_of_the_span = Translation(english='scale of the span =', german='Maßstab der Felds')
     sections_with_color = Translation(english='sections with color', german='Querschnitten mit Farben')
     show = Translation(english='show', german='zeige')
     show_displacement = Translation(english='show displacement', german='zeige Verformung')
