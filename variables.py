@@ -32,6 +32,7 @@ class Variables:
     general_window = None
     bh_screen_label = (500, 300)
     border_for_screen = 20
+    h_of_curves = 50
 
     @dataclass
     class MyColors:
@@ -42,6 +43,7 @@ class Variables:
         background = QColor(240, 240, 240)
         spans = QColor(160, 160, 160)
         y_line = QColor(60, 60, 160)
+        ideal_dir = QColor(60, 250, 20)
 
 
 class Translation:

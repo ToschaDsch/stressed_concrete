@@ -37,6 +37,7 @@ class GeneralWindow(QMainWindow):
         self._list_of_f: [float] = []
         self._list_of_en: [float] = []
         self._list_of_x: list[float] = list()
+        self._h_max: float = 0  # max height of the beam
 
         self.canvas = QtGui.QPixmap(Variables.bh_screen_label[0], Variables.bh_screen_label[1])
         self.canvas.fill(Variables.MyColors.background)
@@ -233,18 +234,18 @@ class GeneralWindow(QMainWindow):
 
     def _make_scale(self):
         s_l = 0
-        max_h = self._list_of_h[0]
+        self._h_max = self._list_of_h[0]
         for i, l_i in enumerate(self._list_of_l):
             s_l += l_i
-            if self._list_of_h[i] > max_h:
-                max_h = self._list_of_h[i] * self._vertical_scale_of_spans
-        if s_l == 0:
+            if self._list_of_h[i] > self._h_max:
+                self._h_max = self._list_of_h[i] * self._vertical_scale_of_spans
+        if s_l == 0 or self._h_max <= 0:
             return None
         scale_x = (Variables.bh_screen_label[0] - 2 * Variables.border_for_screen) / s_l
-        scale_y = (Variables.bh_screen_label[1] - 2 * Variables.border_for_screen) / max_h
+        scale_y = (Variables.bh_screen_label[1] - 2 * Variables.border_for_screen) / self._h_max
         self._scale_spans = min(scale_x, scale_y)
 
-    def _draw_graph(self):
+    def _draw_graph(self, m_dir: []):
         self._make_scale()
         canvas = self._screen_label.pixmap()
         canvas.fill(Variables.MyColors.background)
@@ -252,6 +253,7 @@ class GeneralWindow(QMainWindow):
 
         self._draw_spans()
         self._draw_spline_for_ideal_cable()
+        self._draw_moment_ideal(list_of_m_dir=m_dir)
         self._painter.end()
         self._screen_label.setPixmap(canvas)
 
@@ -325,14 +327,14 @@ class GeneralWindow(QMainWindow):
                                                                            point1.y)
             self._painter.drawLine(x1, y1, x2, y2)
 
-    def _calculate_all(self):
+    def _calculate_init(self):
         self._make_dict_of_x()
         self._calculate_spline_for_ideal()
-        m_dir = self._make_m_ideal()
 
     def _calculate_ans_draw_all(self):
-        self._calculate_all()
-        self._draw_graph()
+        self._calculate_init()
+        m_dir = self._make_m_ideal()
+        self._draw_graph(m_dir=m_dir)
 
     def _calculate_spline_for_ideal(self):
         self._coordinate_for_spline = dict()
@@ -386,3 +388,30 @@ class GeneralWindow(QMainWindow):
             me_r = x_i / l_i * p_i_top_right  # moment from e right - triangle
             list_of_m_dir.append(mf + me_l + me_r)
         return list_of_m_dir
+
+    def _draw_moment_ideal(self, list_of_m_dir: [float]):
+        color = Variables.MyColors.ideal_dir
+        brush = QtGui.QBrush(color)
+        self._painter.setBrush(brush)
+        pen = QtGui.QPen()
+        pen.setColor(color)
+        pen.setWidth(1)
+
+        b0 = Variables.border_for_screen
+        y0 = 2 * b0 + self._scale_spans * self._vertical_scale_of_spans * self._h_max
+        # scale the graph
+        m_max = max(list_of_m_dir)
+        m_min = min(list_of_m_dir)
+        scale = Variables.h_of_curves / (m_max - m_min)
+        for i in range(0, len(list_of_m_dir)):
+            x_1 = self._list_of_x[i] * self._scale_spans + b0
+            y_1 = (list_of_m_dir[i] - m_min) * scale + y0
+            if i != 0:
+                self._painter.drawLine(x_0, y_0, x_1, y_1)
+            x_0 = x_1
+            y_0 = y_1
+        # draw null
+        x_0 = b0
+        x_1 = self._list_of_x[-1] * self._scale_spans + b0
+        y_1 = m_min * scale + y0
+        self._painter.drawLine(x_0, y_1, x_1, y_1)
