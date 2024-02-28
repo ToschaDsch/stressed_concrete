@@ -333,7 +333,8 @@ class GeneralWindow(QMainWindow):
 
     def _calculate_ans_draw_all(self):
         self._calculate_init()
-        m_dir = self._make_m_ideal()
+        m_direct = self._make_m_direct()
+        m_indirect = self._make_m_indirect()
         self._draw_graph(m_dir=m_dir)
 
     def _calculate_spline_for_ideal(self):
@@ -363,7 +364,7 @@ class GeneralWindow(QMainWindow):
                 x0 += dl
                 self._list_of_x.append(x0)
 
-    def _make_m_ideal(self) -> [float]:
+    def _make_m_direct(self) -> [float]:
         j = 0
         l_i = self._list_of_l[0]
         l_0 = 0
@@ -371,23 +372,31 @@ class GeneralWindow(QMainWindow):
         p_i_top_left = self._list_of_p_bottom[0]
         p_i_bottom = self._list_of_p_bottom[0]
         p_i_top_right = self._list_of_p_top[0]
+        e_l = self._list_of_e0[0]
+        e_r = self._list_of_en[0]
         list_of_m_dir = []
         for x in self._list_of_x:
-            if x > l_i:
+            if x > l_i + l_0:
                 j += 1
-                l_i += self._list_of_l[j]
+                l_i = self._list_of_l[j]
                 l_0 += self._list_of_l[j - 1]
-                f_i = .5 * (self._list_of_en[j - 1] + self._list_of_en[j]) + self._list_of_f[j]
+                e_l = self._list_of_en[j - 1]
+                e_r = self._list_of_en[j]
+                f_i = .5 * (e_l + e_r) + self._list_of_f[j]
                 p_i_top_left = self._list_of_p_top[j - 1]
                 p_i_bottom = self._list_of_p_bottom[j]
                 p_i_top_right = self._list_of_p_top[j]
+
             x_i = x - l_0
             g = 8 * f_i * p_i_bottom / l_i ** 2
-            mf = g * (l_i * x_i - x_i ** 2)  # moment from f - parabola
-            me_l = (1 - x_i / l_i) * p_i_top_left  # moment from e left - triangle
-            me_r = x_i / l_i * p_i_top_right  # moment from e right - triangle
+            mf = .5 * g * (l_i * x_i - x_i ** 2)  # moment from f - parabola
+            me_l = -(1 - x_i / l_i) * p_i_top_left * e_l  # moment from e left - triangle
+            me_r = -x_i / l_i * p_i_top_right * e_r  # moment from e right - triangle
             list_of_m_dir.append(mf + me_l + me_r)
         return list_of_m_dir
+
+    def _make_m_indirect(self):
+        pass
 
     def _draw_moment_ideal(self, list_of_m_dir: [float]):
         color = Variables.MyColors.ideal_dir
@@ -402,10 +411,12 @@ class GeneralWindow(QMainWindow):
         # scale the graph
         m_max = max(list_of_m_dir)
         m_min = min(list_of_m_dir)
+        if m_min > 0:
+            m_min = 0
         scale = Variables.h_of_curves / (m_max - m_min)
         for i in range(0, len(list_of_m_dir)):
             x_1 = self._list_of_x[i] * self._scale_spans + b0
-            y_1 = (list_of_m_dir[i] - m_min) * scale + y0
+            y_1 = (list_of_m_dir[i] + abs(m_min)) * scale + y0
             if i != 0:
                 self._painter.drawLine(x_0, y_0, x_1, y_1)
             x_0 = x_1
@@ -413,5 +424,5 @@ class GeneralWindow(QMainWindow):
         # draw null
         x_0 = b0
         x_1 = self._list_of_x[-1] * self._scale_spans + b0
-        y_1 = m_min * scale + y0
+        y_1 = abs(m_min) * scale + y0
         self._painter.drawLine(x_0, y_1, x_1, y_1)
