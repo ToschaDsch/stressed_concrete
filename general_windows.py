@@ -137,7 +137,7 @@ class GeneralWindow(QMainWindow):
         parameters_layout.addWidget(label_e0, 0, 0)
         new_e0 = 0.2 if self._number_of_spans == 0 else self._list_of_en[-1]
         self._list_of_e0.append(new_e0)
-        self._entry_e0.append(QLineEdit(str(self._list_of_e0[self._number_of_spans])))
+        self._entry_e0.append(QLineEdit(str(new_e0)))
         self._entry_e0[-1].setEnabled(self._number_of_spans != 1)
         self._entry_e0[-1].textChanged.connect(partial(self._new_value, 'e0', self._number_of_spans))
         parameters_layout.addWidget(self._entry_e0[-1], 0, 1)
@@ -146,7 +146,7 @@ class GeneralWindow(QMainWindow):
         parameters_layout.addWidget(label_f, 1, 0)
         new_f = 0.2 if self._number_of_spans == 0 else self._list_of_f[-1]
         self._list_of_f.append(new_f)
-        self._entry_f.append(QLineEdit(str(self._list_of_f[self._number_of_spans])))
+        self._entry_f.append(QLineEdit(str(new_f)))
         self._entry_f[-1].textChanged.connect(partial(self._new_value, 'f', self._number_of_spans))
         parameters_layout.addWidget(self._entry_f[-1], 1, 1)
 
@@ -154,7 +154,7 @@ class GeneralWindow(QMainWindow):
         parameters_layout.addWidget(label_en, 2, 0)
         new_en = 0.2 if self._number_of_spans == 0 else self._list_of_en[-1]
         self._list_of_en.append(new_en)
-        self._entry_en.append(QLineEdit(str(self._list_of_en[self._number_of_spans])))
+        self._entry_en.append(QLineEdit(str(new_en)))
         self._entry_en[-1].textChanged.connect(partial(self._new_value, 'en', self._number_of_spans))
         parameters_layout.addWidget(self._entry_en[-1], 2, 1)
         return parameters_layout
@@ -165,7 +165,7 @@ class GeneralWindow(QMainWindow):
         parameters_of_the_span.addWidget(label_h, 0, 0)
         new_h = 1 if self._number_of_spans == 0 else self._list_of_h[-1]
         self._list_of_h.append(new_h)
-        self._entry_h.append(QLineEdit(str(self._list_of_h[self._number_of_spans])))
+        self._entry_h.append(QLineEdit(str(new_h)))
         self._entry_h[-1].textChanged.connect(partial(self._new_value, 'h', self._number_of_spans))
         parameters_of_the_span.addWidget(self._entry_h[-1], 0, 1)
 
@@ -173,7 +173,7 @@ class GeneralWindow(QMainWindow):
         parameters_of_the_span.addWidget(label_l, 1, 0)
         new_l = 32 if self._number_of_spans == 0 else self._list_of_l[-1]
         self._list_of_l.append(new_l)
-        self._entry_l.append(QLineEdit(str(self._list_of_l[self._number_of_spans])))
+        self._entry_l.append(QLineEdit(str(new_l)))
         self._entry_l[-1].textChanged.connect(partial(self._new_value, 'l', self._number_of_spans))
         parameters_of_the_span.addWidget(self._entry_l[-1], 1, 1)
 
@@ -181,7 +181,7 @@ class GeneralWindow(QMainWindow):
         parameters_of_the_span.addWidget(label_y, 2, 0)
         new_y = .5 if self._number_of_spans == 0 else self._list_of_y[-1]
         self._list_of_y.append(new_y)
-        self._entry_y.append(QLineEdit(str(self._list_of_y[self._number_of_spans])))
+        self._entry_y.append(QLineEdit(str(new_y)))
         self._entry_y[-1].textChanged.connect(partial(self._new_value, 'y', self._number_of_spans))
         parameters_of_the_span.addWidget(self._entry_y[-1], 2, 1)
 
@@ -189,7 +189,7 @@ class GeneralWindow(QMainWindow):
         parameters_of_the_span.addWidget(label_p, 3, 0)
         new_p = 3500 if self._number_of_spans == 0 else self._list_of_p_bottom[-1]
         self._list_of_p_bottom.append(new_p)
-        self._entry_p.append(QLineEdit(str(self._list_of_p_bottom[self._number_of_spans])))
+        self._entry_p.append(QLineEdit(str(new_p)))
         self._entry_p[-1].textChanged.connect(partial(self._new_value, 'p_bottom', self._number_of_spans))
         parameters_of_the_span.addWidget(self._entry_p[-1], 3, 1)
 
@@ -197,7 +197,7 @@ class GeneralWindow(QMainWindow):
         parameters_of_the_span.addWidget(label_p_top, 4, 0)
         new_p = 3500 if self._number_of_spans == 0 else self._list_of_p_top[-1]
         self._list_of_p_top.append(new_p)
-        self._entry_p_top.append(QLineEdit(str(self._list_of_p_top[self._number_of_spans])))
+        self._entry_p_top.append(QLineEdit(str(new_p)))
         self._entry_p_top[-1].textChanged.connect(partial(self._new_value, 'p_top', self._number_of_spans))
         parameters_of_the_span.addWidget(self._entry_p_top[-1], 4, 1)
         return parameters_of_the_span

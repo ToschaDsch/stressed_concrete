@@ -20,7 +20,7 @@ def delete_all_data(self):
 
 def send_data_to_program(self, data: dict):
     self._number_of_spans = data['n_spans']
-    for i in range(len(self._number_of_spans)):
+    for i in range(self._number_of_spans):
         self._plus_minus_a_span('+')
     self._entry_dx.setText(str(data['dx']))
     self._entry_scale.setText(str(data['v_scale']))
@@ -69,7 +69,8 @@ def data_to_dict(self) -> dict:
     data['n_spans'] = self._number_of_spans
     data['v_scale'] = self._vertical_scale_of_spans
     data['dx'] = self._dx
-    for i in range(len(self._number_of_spans)):
+    list_of_data = []
+    for i in range(self._number_of_spans):
         data_span = dict()
         data_span['h'] = self._list_of_h[i]
         data_span['l'] = self._list_of_l[i]
@@ -79,4 +80,6 @@ def data_to_dict(self) -> dict:
         data_span['e0'] = self._list_of_e0[i]
         data_span['f'] = self._list_of_f[i]
         data_span['en'] = self._list_of_en[i]
+        list_of_data.append(data_span)
+    data['spans'] = list_of_data
     return data
