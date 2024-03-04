@@ -3,10 +3,11 @@ from functools import partial
 
 from PySide6 import QtGui
 from PySide6.QtCore import QPointF
-from PySide6.QtGui import QColor, QPolygonF
+from PySide6.QtGui import QColor, QPolygonF, QAction, QIcon
 from PySide6.QtWidgets import (QHBoxLayout, QWidget, QMainWindow, QVBoxLayout, QLayout, QLabel, QTabWidget,
-                               QPushButton, QLineEdit, QGridLayout)
+                               QPushButton, QLineEdit, QGridLayout, QToolBar)
 
+from save_open import open_file, save_file
 from small_classes import XY
 from static_functions import make_spline
 from variables import Variables, TextTranslation
@@ -21,6 +22,16 @@ class GeneralWindow(QMainWindow):
         self._screen_label = QLabel()
         self._button_plus_a_span = QPushButton(TextTranslation.plus_a_span.text)
         self._button_minus_a_span = QPushButton(TextTranslation.minus_a_span.text)
+        self._entry_scale = QLineEdit()
+        self._entry_dx = QLineEdit()
+        self._entry_h: [QLineEdit] = []
+        self._entry_l: [QLineEdit] = []
+        self._entry_y: [QLineEdit] = []
+        self._entry_p: [QLineEdit] = []
+        self._entry_p_top: [QLineEdit] = []
+        self._entry_e0: [QLineEdit] = []
+        self._entry_f: [QLineEdit] = []
+        self._entry_en: [QLineEdit] = []
         self._tab_menu = QTabWidget()
         self._current_span = 0
         self._list_of_tabs: [QWidget] = []
@@ -55,10 +66,26 @@ class GeneralWindow(QMainWindow):
         self._init_right_layout(right_layout=right_layout)
         general_layout.addLayout(right_layout)
 
+        self._init_toolbar()
+
         widget = QWidget()
         widget.setLayout(general_layout)
         self.setCentralWidget(widget)
         self._calculate_ans_draw_all()
+
+    def _init_toolbar(self):
+        toolbar = QToolBar("My main toolbar")
+        self.addToolBar(toolbar)
+
+        button_open = QAction(QIcon("icons//open.png"), TextTranslation.open_file.text, self)
+        button_open.setStatusTip(TextTranslation.open_file.text)
+        button_open.triggered.connect(partial(open_file, self))
+        toolbar.addAction(button_open)
+
+        button_save = QAction(QIcon("icons//save.png"), TextTranslation.save_file.text, self)
+        button_save.setStatusTip(TextTranslation.save_file.text)
+        button_save.triggered.connect(partial(save_file, self))
+        toolbar.addAction(button_save)
 
     def _init_left_layout(self, left_layout: QLayout):
         plus_minus_span_layout = self._make_plus_minus_span_layout()
@@ -76,14 +103,14 @@ class GeneralWindow(QMainWindow):
     def _init_right_layout(self, right_layout: QLayout):
         label_scale = QLabel(TextTranslation.scale_of_the_span.text)
         right_layout.addWidget(label_scale)
-        entry_scale = QLineEdit(str(self._vertical_scale_of_spans))
-        entry_scale.textChanged.connect(partial(self._new_value, 'v_scale', self._number_of_spans))
-        right_layout.addWidget(entry_scale)
+        self._entry_scale = QLineEdit(str(self._vertical_scale_of_spans))
+        self._entry_scale.textChanged.connect(partial(self._new_value, 'v_scale', self._number_of_spans))
+        right_layout.addWidget(self._entry_scale)
         label_dx = QLabel('dx, m = ')
         right_layout.addWidget(label_dx)
-        entry_dx = QLineEdit(str(self._dx))
-        entry_dx.textChanged.connect(partial(self._new_value, 'dx', self._number_of_spans))
-        right_layout.addWidget(entry_dx)
+        self._entry_dx = QLineEdit(str(self._dx))
+        self._entry_dx.textChanged.connect(partial(self._new_value, 'dx', self._number_of_spans))
+        right_layout.addWidget(self._entry_dx)
 
     def _change_tab(self, i):
         self._current_span = i
@@ -110,26 +137,26 @@ class GeneralWindow(QMainWindow):
         parameters_layout.addWidget(label_e0, 0, 0)
         new_e0 = 0.2 if self._number_of_spans == 0 else self._list_of_en[-1]
         self._list_of_e0.append(new_e0)
-        entry_e0 = QLineEdit(str(self._list_of_e0[self._number_of_spans]))
-        entry_e0.setEnabled(self._number_of_spans != 1)
-        entry_e0.textChanged.connect(partial(self._new_value, 'e0', self._number_of_spans))
-        parameters_layout.addWidget(entry_e0, 0, 1)
+        self._entry_e0.append(QLineEdit(str(self._list_of_e0[self._number_of_spans])))
+        self._entry_e0[-1].setEnabled(self._number_of_spans != 1)
+        self._entry_e0[-1].textChanged.connect(partial(self._new_value, 'e0', self._number_of_spans))
+        parameters_layout.addWidget(self._entry_e0[-1], 0, 1)
 
         label_f = QLabel('f, m =')
         parameters_layout.addWidget(label_f, 1, 0)
         new_f = 0.2 if self._number_of_spans == 0 else self._list_of_f[-1]
         self._list_of_f.append(new_f)
-        entry_f = QLineEdit(str(self._list_of_f[self._number_of_spans]))
-        entry_f.textChanged.connect(partial(self._new_value, 'f', self._number_of_spans))
-        parameters_layout.addWidget(entry_f, 1, 1)
+        self._entry_f.append(QLineEdit(str(self._list_of_f[self._number_of_spans])))
+        self._entry_f[-1].textChanged.connect(partial(self._new_value, 'f', self._number_of_spans))
+        parameters_layout.addWidget(self._entry_f[-1], 1, 1)
 
         label_en = QLabel('en, m =')
         parameters_layout.addWidget(label_en, 2, 0)
         new_en = 0.2 if self._number_of_spans == 0 else self._list_of_en[-1]
         self._list_of_en.append(new_en)
-        entry_en = QLineEdit(str(self._list_of_en[self._number_of_spans]))
-        entry_en.textChanged.connect(partial(self._new_value, 'en', self._number_of_spans))
-        parameters_layout.addWidget(entry_en, 2, 1)
+        self._entry_en.append(QLineEdit(str(self._list_of_en[self._number_of_spans])))
+        self._entry_en[-1].textChanged.connect(partial(self._new_value, 'en', self._number_of_spans))
+        parameters_layout.addWidget(self._entry_en[-1], 2, 1)
         return parameters_layout
 
     def _make_layout_parameter_of_the_span(self) -> QWidget:
@@ -138,41 +165,41 @@ class GeneralWindow(QMainWindow):
         parameters_of_the_span.addWidget(label_h, 0, 0)
         new_h = 1 if self._number_of_spans == 0 else self._list_of_h[-1]
         self._list_of_h.append(new_h)
-        entry_h = QLineEdit(str(self._list_of_h[self._number_of_spans]))
-        entry_h.textChanged.connect(partial(self._new_value, 'h', self._number_of_spans))
-        parameters_of_the_span.addWidget(entry_h, 0, 1)
+        self._entry_h.append(QLineEdit(str(self._list_of_h[self._number_of_spans])))
+        self._entry_h[-1].textChanged.connect(partial(self._new_value, 'h', self._number_of_spans))
+        parameters_of_the_span.addWidget(self._entry_h[-1], 0, 1)
 
         label_l = QLabel('l, m =')
         parameters_of_the_span.addWidget(label_l, 1, 0)
         new_l = 32 if self._number_of_spans == 0 else self._list_of_l[-1]
         self._list_of_l.append(new_l)
-        entry_l = QLineEdit(str(self._list_of_l[self._number_of_spans]))
-        entry_l.textChanged.connect(partial(self._new_value, 'l', self._number_of_spans))
-        parameters_of_the_span.addWidget(entry_l, 1, 1)
+        self._entry_l.append(QLineEdit(str(self._list_of_l[self._number_of_spans])))
+        self._entry_l[-1].textChanged.connect(partial(self._new_value, 'l', self._number_of_spans))
+        parameters_of_the_span.addWidget(self._entry_l[-1], 1, 1)
 
         label_y = QLabel('y, m =')
         parameters_of_the_span.addWidget(label_y, 2, 0)
         new_y = .5 if self._number_of_spans == 0 else self._list_of_y[-1]
         self._list_of_y.append(new_y)
-        entry_y = QLineEdit(str(self._list_of_y[self._number_of_spans]))
-        entry_y.textChanged.connect(partial(self._new_value, 'y', self._number_of_spans))
-        parameters_of_the_span.addWidget(entry_y, 2, 1)
+        self._entry_y.append(QLineEdit(str(self._list_of_y[self._number_of_spans])))
+        self._entry_y[-1].textChanged.connect(partial(self._new_value, 'y', self._number_of_spans))
+        parameters_of_the_span.addWidget(self._entry_y[-1], 2, 1)
 
         label_p = QLabel(TextTranslation.p_under.text)
         parameters_of_the_span.addWidget(label_p, 3, 0)
         new_p = 3500 if self._number_of_spans == 0 else self._list_of_p_bottom[-1]
         self._list_of_p_bottom.append(new_p)
-        entry_p = QLineEdit(str(self._list_of_p_bottom[self._number_of_spans]))
-        entry_p.textChanged.connect(partial(self._new_value, 'p_bottom', self._number_of_spans))
-        parameters_of_the_span.addWidget(entry_p, 3, 1)
+        self._entry_p.append(QLineEdit(str(self._list_of_p_bottom[self._number_of_spans])))
+        self._entry_p[-1].textChanged.connect(partial(self._new_value, 'p_bottom', self._number_of_spans))
+        parameters_of_the_span.addWidget(self._entry_p[-1], 3, 1)
 
         label_p_top = QLabel(TextTranslation.p_top.text)
         parameters_of_the_span.addWidget(label_p_top, 4, 0)
         new_p = 3500 if self._number_of_spans == 0 else self._list_of_p_top[-1]
         self._list_of_p_top.append(new_p)
-        entry_p_top = QLineEdit(str(self._list_of_p_top[self._number_of_spans]))
-        entry_p_top.textChanged.connect(partial(self._new_value, 'p_top', self._number_of_spans))
-        parameters_of_the_span.addWidget(entry_p_top, 4, 1)
+        self._entry_p_top.append(QLineEdit(str(self._list_of_p_top[self._number_of_spans])))
+        self._entry_p_top[-1].textChanged.connect(partial(self._new_value, 'p_top', self._number_of_spans))
+        parameters_of_the_span.addWidget(self._entry_p_top[-1], 4, 1)
         return parameters_of_the_span
 
     def _new_value(self, type_of_the_value: str, tab_index: int, new_value: str):
@@ -230,6 +257,15 @@ class GeneralWindow(QMainWindow):
             self._list_of_e0.pop()
             self._list_of_f.pop()
             self._list_of_en.pop()
+
+            self._entry_h.pop()
+            self._entry_l.pop()
+            self._entry_y.pop()
+            self._entry_p.pop()
+            self._entry_p_top.pop()
+            self._entry_e0.pop()
+            self._entry_f.pop()
+            self._entry_en.pop()
         self._calculate_ans_draw_all()
 
     def _make_scale(self):
@@ -335,7 +371,7 @@ class GeneralWindow(QMainWindow):
         self._calculate_init()
         m_direct = self._make_m_direct()
         m_indirect = self._make_m_indirect()
-        self._draw_graph(m_dir=m_dir)
+        self._draw_graph(m_dir=m_direct)
 
     def _calculate_spline_for_ideal(self):
         self._coordinate_for_spline = dict()
@@ -395,8 +431,10 @@ class GeneralWindow(QMainWindow):
             list_of_m_dir.append(mf + me_l + me_r)
         return list_of_m_dir
 
-    def _make_m_indirect(self):
-        pass
+    def _make_m_indirect(self) -> list:
+        list_m_direct = []
+
+        return list_m_direct
 
     def _draw_moment_ideal(self, list_of_m_dir: [float]):
         color = Variables.MyColors.ideal_dir
