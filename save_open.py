@@ -20,20 +20,20 @@ def delete_all_data(self):
 
 def send_data_to_program(self, data: dict):
     self._number_of_spans = data['n_spans']
-    for i in range(self._number_of_spans):
+    for i in range(self._number_of_spans-1):
         self._plus_minus_a_span('+')
     self._entry_dx.setText(str(data['dx']))
     self._entry_scale.setText(str(data['v_scale']))
     data_spans = data['spans']
-    for data_span in data_spans:
-        self._entry_h.setText(str(data_span['h']))
-        self._entry_l.setText(str(data_span['l']))
-        self._entry_y.setText(str(data_span['y']))
-        self._entry_p.setText(str(data_span['p_bottom']))
-        self._entry_p_top.setText(str(data_span['p_top']))
-        self._entry_e0.setText(str(data_span['e0']))
-        self._entry_f.setText(str(data_span['f']))
-        self._entry_en.setText(str(data_span['en']))
+    for i, data_span in enumerate(data_spans):
+        self._entry_h[i].setText(str(data_span['h']))
+        self._entry_l[i].setText(str(data_span['l']))
+        self._entry_y[i].setText(str(data_span['y']))
+        self._entry_p[i].setText(str(data_span['p_bottom']))
+        self._entry_p_top[i].setText(str(data_span['p_top']))
+        self._entry_e0[i].setText(str(data_span['e0']))
+        self._entry_f[i].setText(str(data_span['f']))
+        self._entry_en[i].setText(str(data_span['en']))
 
 
 def open_file_menu(self) -> bool | str:
